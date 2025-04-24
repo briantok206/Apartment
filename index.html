@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Scale Converter</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 600px;
+      margin: 2rem auto;
+      padding: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 12px;
+    }
+    label, input, button {
+      display: block;
+      margin: 0.5rem 0;
+      width: 100%;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    th, td {
+      padding: 0.5rem;
+      border: 1px solid #aaa;
+      text-align: center;
+    }
+    #debug-box {
+      margin-top: 2rem;
+      background: #f0f0f0;
+      padding: 1rem;
+      height: 120px;
+      overflow-y: auto;
+      border: 1px solid #999;
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+
+<h2>Scale Converter</h2>
+
+<label for="name">Name:</label>
+<input type="text" id="name" required>
+
+<label for="width">Actual Width:</label>
+<input type="number" id="width" step="any" required>
+
+<label for="height">Actual Height:</label>
+<input type="number" id="height" step="any" required>
+
+<button onclick="addEntry()">Add Entry</button>
+
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Actual Width</th>
+      <th>Actual Height</th>
+      <th>Scaled Width</th>
+      <th>Scaled Height</th>
+      <th>Scale</th>
+    </tr>
+  </thead>
+  <tbody id="output"></tbody>
+</table>
+
+<pre id="debug-box">[Debug Output]\n</pre>
+
+<script>
+function debug(msg) {
+  const box = document.getElementById('debug-box');
+  box.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
+  box.scrollTop = box.scrollHeight;
+}
+
+class ScaleManager {
+  constructor(storageKey, scale) {
+    this.storageKey = storageKey;
+    this.scale = scale;
+    this.items = this.loadData();
+
+    if (!Array.isArray(this.items) || !this.items.every(this.isValidItem.bind(this))) {
+      debug("Invalid or no previous data found. Resetting data.");
+      this.items = [];
+      this.saveData();
+    } else {
+      this.rescaleItems();
+    }
+  }
+
+  isValidItem(item) {
+    const [name, actualW, actualH, scaledW, scaledH, scale] = item;
+    return item.length === 6 &&
+           scale === this.scale &&
+           actualW * scale === scaledW &&
+           actualH * scale === scaledH;
+  }
+
+  rescaleItems() {
+    this.items = this.items.map(([name, w, h]) => this.scaleItem(name, w, h));
+    this.saveData();
+  }
+
+  scaleItem(name, actualW, actualH) {
+    const scaledW = actualW * this.scale;
+    const scaledH = actualH * this.scale;
+    return [name, actualW, actualH, scaledW, scaledH, this.scale];
+  }
+
+  addItem(name, actualW, actualH) {
+    const newItem = this.scaleItem(name, actualW, actualH);
+    this.items.push(newItem);
+    this.saveData();
+    debug(`Added: ${JSON.stringify(newItem)}`);
+  }
+
+  loadData() {
+    const raw = localStorage.getItem(this.storageKey);
+    try {
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      debug("Failed to load data: " + e.message);
+      return [];
+    }
+  }
+
+  saveData() {
+    localStorage.setItem(this.storageKey, JSON.stringify(this.items));
+  }
+
+  getAllItems() {
+    return this.items;
+  }
+}
+
+const manager = new ScaleManager("scaledItems", 1 / 69);
+
+function addEntry() {
+  const name = document.getElementById("name").value.trim();
+  const width = parseFloat(document.getElementById("width").value);
+  const height = parseFloat(document.getElementById("height").value);
+
+  if (name && !isNaN(width) && !isNaN(height)) {
+    manager.addItem(name, width, height);
+    document.getElementById("name").value = '';
+    document.getElementById("width").value = '';
+    document.getElementById("height").value = '';
+    renderTable();
+  } else {
+    debug("Error: Please enter valid values for all fields.");
+  }
+}
+
+function renderTable() {
+  const tbody = document.getElementById("output");
+  tbody.innerHTML = "";
+
+  manager.getAllItems().forEach(row => {
+    const tr = document.createElement("tr");
+    row.forEach(cell => {
+      const td = document.createElement("td");
+      td.textContent = typeof cell === "number" ? cell.toFixed(2) : cell;
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+
+  debug("Table rendered with " + manager.getAllItems().length + " items.");
+}
+
+// Initial render
+renderTable();
+</script>
+
+</body>
+</html>
