@@ -6,7 +6,7 @@
   <style>
     body {
       font-family: sans-serif;
-      max-width: 600px;
+      max-width: 700px;
       margin: 2rem auto;
       padding: 1rem;
       border: 1px solid #ccc;
@@ -37,6 +37,14 @@
       font-family: monospace;
       font-size: 0.9rem;
     }
+    .btn-delete {
+      color: white;
+      background-color: crimson;
+      border: none;
+      padding: 0.3rem 0.5rem;
+      border-radius: 5px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -63,6 +71,7 @@
       <th>Scaled Width</th>
       <th>Scaled Height</th>
       <th>Scale</th>
+      <th>Action</th>
     </tr>
   </thead>
   <tbody id="output"></tbody>
@@ -118,6 +127,16 @@ class ScaleManager {
     debug(`Added: ${JSON.stringify(newItem)}`);
   }
 
+  deleteItem(index) {
+    if (index >= 0 && index < this.items.length) {
+      const removed = this.items.splice(index, 1);
+      this.saveData();
+      debug(`Deleted: ${JSON.stringify(removed[0])}`);
+    } else {
+      debug("Invalid index for deletion.");
+    }
+  }
+
   loadData() {
     const raw = localStorage.getItem(this.storageKey);
     try {
@@ -159,13 +178,27 @@ function renderTable() {
   const tbody = document.getElementById("output");
   tbody.innerHTML = "";
 
-  manager.getAllItems().forEach(row => {
+  manager.getAllItems().forEach((row, index) => {
     const tr = document.createElement("tr");
+
     row.forEach(cell => {
       const td = document.createElement("td");
       td.textContent = typeof cell === "number" ? cell.toFixed(2) : cell;
       tr.appendChild(td);
     });
+
+    // Action column
+    const tdAction = document.createElement("td");
+    const btnDelete = document.createElement("button");
+    btnDelete.textContent = "Delete";
+    btnDelete.className = "btn-delete";
+    btnDelete.onclick = () => {
+      manager.deleteItem(index);
+      renderTable();
+    };
+    tdAction.appendChild(btnDelete);
+    tr.appendChild(tdAction);
+
     tbody.appendChild(tr);
   });
 
